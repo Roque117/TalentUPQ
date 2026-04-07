@@ -1,4 +1,4 @@
-# TalentUPQ 🎓💼
+# TalentUPQ
 
 **TalentUPQ** es una aplicación web de vanguardia diseñada para optimizar y fortalecer la vinculación laboral entre los estudiantes/egresados de la **Universidad Politécnica de Querétaro (UPQ)** y el sector productivo.
 
