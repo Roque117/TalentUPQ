@@ -1,81 +1,68 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, current_app
+from flask import Flask, render_template, request, redirect, url_for, session, flash, current_app, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, date
-from flask import session 
 import os
 import re
 import uuid
 import time
-import pyodbc
+import psycopg2 # Cambiado: ahora usamos PostgreSQL
+from psycopg2.extras import RealDictCursor
 import traceback
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 import random
 import string
-import reportlab
-from flask import send_file
-from flask_cors import CORS
-from flasgger import Swagger, swag_from
-
-
-
-
-
-
-from flask import Flask
 from flask_cors import CORS
 from flasgger import Swagger
 
 app = Flask(__name__)
 
 # --- CONFIGURACIÓN DE CORS ---
-# Permitimos todos los orígenes para que React (puerto 3000) pueda hablar con Flask (puerto 5000)
 CORS(app, origins='*')
 
-# --- CONFIGURACIÓN DE SQL SERVER (INTERNA DE DOCKER) ---
-# Importante: El host es 'sqlserver' porque así se llama tu servicio en el YAML
-app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
-app.config['SQL_SERVER_SERVER'] = '10.0.2.15,1433' 
-app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
-app.config['SQL_SERVER_UID'] = 'sa' 
-app.config['SQL_SERVER_PWD'] = 'TalentUPQ2026!'  # <--- Verifica que sea la misma en tu YAML
-app.config['SQL_SERVER_ENCRYPT'] = 'no' 
-app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes' 
+# --- CONFIGURACIÓN DE POSTGRESQL (DOKPLOY) ---
+# El host 'dokploy-db-talento' debe ser el nombre que le des a la DB en el panel
+app.config['DB_NAME'] = 'BolsaTrabajoUPQ'
+app.config['DB_USER'] = 'postgres'
+app.config['DB_PASS'] = 'TalentUPQ2026!'
+app.config['DB_HOST'] = 'dokploy-db-talento' 
+app.config['DB_PORT'] = '5432'
+
+def get_db_connection():
+    """Función para conectar a PostgreSQL"""
+    conn = psycopg2.connect(
+        dbname=app.config['DB_NAME'],
+        user=app.config['DB_USER'],
+        password=app.config['DB_PASS'],
+        host=app.config['DB_HOST'],
+        port=app.config['DB_PORT']
+    )
+    return conn
 
 # --- CONFIGURACIÓN GENERAL ---
 app.secret_key = 'roque_bolsa_trabajo_key'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'png', 'jpg', 'jpeg'}
 
-# --- CONFIGURACIÓN DE CORREO (ROQUE) ---
+# --- CONFIGURACIÓN DE CORREO ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'roquejos321@gmail.com'
-app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi' # Tu contraseña de aplicación
+app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi'
 
-# Swagger para documentar tu API
+# Swagger
 app.config['SWAGGER'] = {
     'title': 'TalentUPQ API - Roque',
     'uiversion': 3
 }
 swagger = Swagger(app)
 
-# --- AQUÍ EMPIEZAN TUS RUTAS ---
-@app.route('/')
-def index():
-    return {"status": "API Corriendo en Dokploy", "db_connected": "Probablemente sí"}
-
-if __name__ == '__main__':
-    # Esto solo se usa para desarrollo local, Gunicorn ignorará esto en Docker
-    app.run(host='0.0.0.0', port=5000)
-
-
+# --- RUTAS ---
 
 
 
