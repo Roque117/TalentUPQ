@@ -70,19 +70,7 @@ app.config['SWAGGER'] = {
 swagger = Swagger(app)
 
 # --- RUTAS ---
-
-
-# Si tienes más rutas debajo, pégalas manteniendo el uso de get_db_connection()
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-
-
-
-
-
-
-
+@app.route('/')
 def enviar_correo_bienvenida(email_usuario, nombre_usuario, tipo_usuario):
     """Envía un correo de bienvenida al usuario registrado"""
     try:
@@ -699,7 +687,6 @@ def get_admin_actual():
     return None
 
 
-@app.route('/')
 def index():
     # El LIMIT 3 se mueve al final de la consulta
     vacantes = execute_query(
