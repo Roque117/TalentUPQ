@@ -70,25 +70,7 @@ app.config['SWAGGER'] = {
 swagger = Swagger(app)
 
 # --- RUTAS ---
-@app.route('/')
-def index():
-    db_status = "Desconectado"
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT version();')
-        cur.fetchone()
-        cur.close()
-        conn.close()
-        db_status = "Conectado a PostgreSQL exitosamente"
-    except Exception as e:
-        db_status = f"Error de conexión: {str(e)}"
-    
-    return {
-        "status": "API TalentUPQ Corriendo",
-        "database": db_status,
-        "author": "Roque Josue"
-    }
+
 
 # Si tienes más rutas debajo, pégalas manteniendo el uso de get_db_connection()
 
