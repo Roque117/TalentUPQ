@@ -28,8 +28,13 @@ from flasgger import Swagger, swag_from
 
 
 
+from flask import Flask
+from flask_cors import CORS
+from flasgger import Swagger
+
 app = Flask(__name__)
 
+# --- CONFIGURACIÓN DE CORS ---
 # He actualizado los orígenes para que tu Front-end y Back-end se hablen sin errores
 CORS(app, origins=[
     'http://localhost:3000', 
@@ -38,13 +43,14 @@ CORS(app, origins=[
     'http://192.168.1.112:8081'
 ])
 
+# --- CONFIGURACIÓN DE SWAGGER ---
 app.config['SWAGGER'] = {
     'title': 'TalentUPQ API - Roque',
     'version': '1.0.0',
     'description': 'API para la bolsa de trabajo TalentUPQ - Universidad Politécnica de Querétaro',
     'contact': {
         'name': 'Roque',
-        'email': 'roquejos321@gmail.com', # Tu correo corregido
+        'email': 'roquejos321@gmail.com',
         'url': 'http://192.168.1.112:8081/'
     },
     'specs_route': '/apidocs/',
@@ -55,31 +61,28 @@ app.config['SWAGGER'] = {
     'swagger_ui_standalone_preset_js': '//unpkg.com/swagger-ui-dist@3/swagger-ui-standalone-preset.js',
     'swagger_ui_css': '//unpkg.com/swagger-ui-dist@3/swagger-ui.css',
 }
-
 swagger = Swagger(app)
 
+# --- CONFIGURACIÓN GENERAL ---
 app.secret_key = 'roque_bolsa_trabajo_key'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'png', 'jpg', 'jpeg'}
 
-# --- CONFIGURACIÓN DE SQL SERVER (YA CON TUS DATOS DE ACCESO) ---
+# --- CONFIGURACIÓN CON TAILSCALE (SQL SERVER) ---
 app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
-app.config['SQL_SERVER_SERVER'] = '192.168.1.112,1433' 
+app.config['SQL_SERVER_SERVER'] = '100.69.150.93,1433' # IP de Tailscale
 app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
-app.config['SQL_SERVER_UID'] = 'Roque'        # <--- TU NUEVO USUARIO
-app.config['SQL_SERVER_PWD'] = '12345678'     # <--- TU NUEVA CLAVE
+app.config['SQL_SERVER_UID'] = 'Roque'
+app.config['SQL_SERVER_PWD'] = '12345678'
 app.config['SQL_SERVER_ENCRYPT'] = 'yes'
-app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes' 
-# -------------------------------------------------------------
+app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes'
 
-# --- CONFIGURACIÓN DE CORREO (ROQUE) ---
+# --- CONFIGURACIÓN DE CORREO (GMAIL) ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'roquejos321@gmail.com'  
-# RECUERDA: La contraseña de abajo debe ser la "Contraseña de Aplicación" de 16 letras de Google
-app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi'
-
+app.config['MAIL_USERNAME'] = 'roquejos321@gmail.com'
+app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi' # Contraseña de aplicación
 
 
 
