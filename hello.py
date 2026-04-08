@@ -28,7 +28,7 @@ CORS(app, origins='*')
 # El host 'dokploy-db-talento' debe ser el nombre que le des a la DB en el panel
 app.config['DB_NAME'] = 'BolsaTrabajoUPQ'
 app.config['DB_USER'] = 'postgres'
-app.config['DB_PASS'] = 'TalentUPQ2026!'
+app.config['DB_PASS'] = 'TalentUPQ2026'
 app.config['DB_HOST'] = 'dokploy-db-talento' 
 app.config['DB_PORT'] = '5432'
 
