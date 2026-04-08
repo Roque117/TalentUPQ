@@ -70,7 +70,14 @@ app.config['SWAGGER'] = {
 swagger = Swagger(app)
 
 # --- RUTAS ---
+
+
 @app.route('/')
+def index():
+    # ... código que busca vacantes ...
+    return render_template('index.html', ...)
+
+@app.route('/enviar-correo-bienvenida')
 def enviar_correo_bienvenida(email_usuario, nombre_usuario, tipo_usuario):
     """Envía un correo de bienvenida al usuario registrado"""
     try:
