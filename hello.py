@@ -24,36 +24,32 @@ from flasgger import Swagger, swag_from
 
 
 
+
+
+
+
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000'])
 
-
+# He actualizado los orígenes para que tu Front-end y Back-end se hablen sin errores
+CORS(app, origins=[
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000', 
+    'http://192.168.1.112:3000',
+    'http://192.168.1.112:8081'
+])
 
 app.config['SWAGGER'] = {
-    'title': 'TalentUPQ API',
+    'title': 'TalentUPQ API - Roque',
     'version': '1.0.0',
     'description': 'API para la bolsa de trabajo TalentUPQ - Universidad Politécnica de Querétaro',
-    'termsOfService': '/terms',
     'contact': {
-        'name': 'TalentUPQ',
-        'email': 'bolsa.trabajo@upq.edu.mx',
-        'url': 'http://127.0.0.1:5000/'
-    },
-    'license': {
-        'name': 'MIT',
-        'url': 'https://opensource.org/licenses/MIT'
+        'name': 'Roque',
+        'email': 'roquejos321@gmail.com', # Tu correo corregido
+        'url': 'http://192.168.1.112:8081/'
     },
     'specs_route': '/apidocs/',
     'uiversion': 3,
     'swagger_ui': True,
-    'specs': [
-        {
-            'endpoint': 'apispec',
-            'route': '/apispec.json',
-            'rule_filter': lambda rule: True,
-            'model_filter': lambda tag: True,
-        }
-    ],
     'static_url_path': '/flasgger_static',
     'swagger_ui_bundle_js': '//unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js',
     'swagger_ui_standalone_preset_js': '//unpkg.com/swagger-ui-dist@3/swagger-ui-standalone-preset.js',
@@ -62,25 +58,32 @@ app.config['SWAGGER'] = {
 
 swagger = Swagger(app)
 
-app.secret_key = 'upq_bolsa_trabajo_secret_key'
+app.secret_key = 'roque_bolsa_trabajo_key'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'png', 'jpg', 'jpeg'}
 
+# --- CONFIGURACIÓN DE SQL SERVER (YA CON TUS DATOS DE ACCESO) ---
 app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
-app.config['SQL_SERVER_SERVER'] = 'localhost,1433'
+app.config['SQL_SERVER_SERVER'] = '192.168.1.112,1433' 
 app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
-app.config['SQL_SERVER_UID'] = 'sa'
-app.config['SQL_SERVER_PWD'] = 'Thefernando9'
+app.config['SQL_SERVER_UID'] = 'Roque'        # <--- TU NUEVO USUARIO
+app.config['SQL_SERVER_PWD'] = '12345678'     # <--- TU NUEVA CLAVE
 app.config['SQL_SERVER_ENCRYPT'] = 'yes'
-app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes'
+app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes' 
+# -------------------------------------------------------------
 
-
-
+# --- CONFIGURACIÓN DE CORREO (ROQUE) ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'ferhernandezdimas@gmail.com'  
-app.config['MAIL_PASSWORD'] = 'yaah cbey ukdo itqc'  
+app.config['MAIL_USERNAME'] = 'roquejos321@gmail.com'  
+# RECUERDA: La contraseña de abajo debe ser la "Contraseña de Aplicación" de 16 letras de Google
+app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi'
+
+
+
+
+
 
 
 
