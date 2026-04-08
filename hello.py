@@ -651,32 +651,34 @@ def get_db_connection():
 
 def execute_query(query, params=None, fetch=True):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    # RealDictCursor permite acceder a los datos como usuario['Email'] en vez de usuario[0]
+    cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        if params:
-            cursor.execute(query, params)
-        else:
-            cursor.execute(query)
+        # IMPORTANTE: Cambiamos el formato de parámetros de SQL Server (?) a Postgres (%s)
+        if query:
+            query = query.replace('?', '%s')
+            
+        cur.execute(query, params)
         
         if fetch:
+            # Si es un SELECT, obtenemos los resultados
             if query.strip().upper().startswith('SELECT'):
-                columns = [column[0] for column in cursor.description]
-                results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                results = cur.fetchall()
                 return results
-            elif query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')):
+            else:
                 conn.commit()
-                return cursor.rowcount
+                return cur.rowcount
         else:
             conn.commit()
             return None
             
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"Database error: {str(e)}")
+        current_app.logger.error(f"Error en base de datos: {str(e)}")
         raise e
     finally:
-        cursor.close()
+        cur.close()
         conn.close()
 
 
@@ -4639,18 +4641,19 @@ def inject_current_year():
     return {'current_year': datetime.now().year}
 
 if __name__ == '__main__':
-    # Creamos la carpeta de subidas si no existe
+    # 1. Creamos la carpeta de subidas si no existe
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Probamos la conexión antes de arrancar
+    # 2. PROBAMOS LA CONEXIÓN (Esto te salva la vida en los Logs)
     try:
         conn = get_db_connection()
-        print("✅ Conexión exitosa a la base de datos")
+        print("✅ CONEXIÓN EXITOSA A POSTGRESQL")
         conn.close()
     except Exception as e:
-        print(f"❌ Error al conectar a la base de datos: {str(e)}")
-        # No salimos con exit(1) para que el debug mode nos deje ver el error en el navegador
+        print(f"❌ ERROR CRÍTICO DE CONEXIÓN: {str(e)}")
+        # No ponemos exit(1) para que el Debug Mode nos muestre el error en el navegador
 
-    # EL ÚNICO ARRANQUE: Configurado para Dokploy (0.0.0.0) y con Debug activo
+    # 3. ARRANQUE PARA DOKPLOY
     app.run(host='0.0.0.0', port=5000, debug=True)
+
     
