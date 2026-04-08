@@ -6,7 +6,7 @@ import os
 import re
 import uuid
 import time
-import psycopg2 # Cambiado: ahora usamos PostgreSQL
+import psycopg2 
 from psycopg2.extras import RealDictCursor
 import traceback
 from functools import wraps
@@ -18,6 +18,14 @@ import random
 import string
 from flask_cors import CORS
 from flasgger import Swagger
+import nltk
+
+# Descargar recursos necesarios de NLTK (para evitar errores de ModuleNotFoundError)
+try:
+    nltk.download('punkt')
+    nltk.download('stopwords')
+except:
+    pass
 
 app = Flask(__name__)
 
@@ -25,15 +33,15 @@ app = Flask(__name__)
 CORS(app, origins='*')
 
 # --- CONFIGURACIÓN DE POSTGRESQL (DOKPLOY) ---
-# El host 'dokploy-db-talento' debe ser el nombre que le des a la DB en el panel
+# IMPORTANTE: Asegúrate que en Dokploy el nombre de la DB sea exactamente 'BolsaTrabajoUPQ'
 app.config['DB_NAME'] = 'BolsaTrabajoUPQ'
 app.config['DB_USER'] = 'postgres'
 app.config['DB_PASS'] = 'TalentUPQ2026'
-app.config['DB_HOST'] = 'dokploy-db-talento' 
+app.config['DB_HOST'] = 'talent-upq-dbtalento' 
 app.config['DB_PORT'] = '5432'
 
 def get_db_connection():
-    """Función para conectar a PostgreSQL"""
+    """Función para conectar a PostgreSQL usando la configuración de la app"""
     conn = psycopg2.connect(
         dbname=app.config['DB_NAME'],
         user=app.config['DB_USER'],
@@ -63,6 +71,30 @@ app.config['SWAGGER'] = {
 swagger = Swagger(app)
 
 # --- RUTAS ---
+@app.route('/')
+def index():
+    db_status = "Desconectado"
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('SELECT version();')
+        cur.fetchone()
+        cur.close()
+        conn.close()
+        db_status = "Conectado a PostgreSQL exitosamente"
+    except Exception as e:
+        db_status = f"Error de conexión: {str(e)}"
+    
+    return {
+        "status": "API TalentUPQ Corriendo",
+        "database": db_status,
+        "author": "Roque Josue"
+    }
+
+# Si tienes más rutas debajo, pégalas manteniendo el uso de get_db_connection()
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
 
 
 
