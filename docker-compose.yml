@@ -1,6 +1,8 @@
 version: '3.8'
 
-sqlserver:
+services:
+  # Base de Datos SQL Server
+  sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: talentupq_sqlserver
     environment:
@@ -14,13 +16,11 @@ sqlserver:
     networks:
       - talentupq_network
     restart: unless-stopped
-    # --- ESTO ES LO QUE TIENES QUE CAMBIAR ---
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${DB_PASSWORD} -Q 'SELECT 1' || exit 1"]
-      interval: 15s      # Revisa cada 15 segundos
-      timeout: 10s       # Espera hasta 10 segundos por respuesta
-      retries: 5         # Intenta 5 veces antes de marcar error
-      start_period: 45s  # LE DA 45 SEGUNDOS DE GRACIA PARA ARRANCAR ANTES DE EMPEZAR A REVISAR
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${DB_PASSWORD} -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   # API Flask
   flask_app:
