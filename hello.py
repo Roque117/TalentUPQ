@@ -24,6 +24,9 @@ from flasgger import Swagger, swag_from
 
 
 
+
+
+
 from flask import Flask
 from flask_cors import CORS
 from flasgger import Swagger
@@ -31,47 +34,49 @@ from flasgger import Swagger
 app = Flask(__name__)
 
 # --- CONFIGURACIÓN DE CORS ---
-CORS(app, origins=[
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000', 
-    'http://192.168.1.112:3000',
-    'http://192.168.1.112:8081'
-])
+# Permitimos todos los orígenes para que React (puerto 3000) pueda hablar con Flask (puerto 5000)
+CORS(app, origins='*')
 
-# --- CONFIGURACIÓN DE SWAGGER ---
-app.config['SWAGGER'] = {
-    'title': 'TalentUPQ API - Roque',
-    'version': '1.0.0',
-    'description': 'API para la bolsa de trabajo TalentUPQ',
-    'specs_route': '/apidocs/',
-    'uiversion': 3,
-    'swagger_ui': True,
-    'static_url_path': '/flasgger_static',
-}
-swagger = Swagger(app)
+# --- CONFIGURACIÓN DE SQL SERVER (INTERNA DE DOCKER) ---
+# Importante: El host es 'sqlserver' porque así se llama tu servicio en el YAML
+app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
+app.config['SQL_SERVER_SERVER'] = 'sqlserver,1433' 
+app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
+app.config['SQL_SERVER_UID'] = 'sa' 
+app.config['SQL_SERVER_PWD'] = '12345678'  # <--- Verifica que sea la misma en tu YAML
+app.config['SQL_SERVER_ENCRYPT'] = 'no' 
+app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes' 
 
 # --- CONFIGURACIÓN GENERAL ---
 app.secret_key = 'roque_bolsa_trabajo_key'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'png', 'jpg', 'jpeg'}
 
-# --- CONFIGURACIÓN CON SQL SERVER (DOCKER INTERNAL) ---
-app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
-app.config['SQL_SERVER_SERVER'] = 'sqlserver,1433' 
-app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
-app.config['SQL_SERVER_UID'] = 'sa'
-app.config['SQL_SERVER_PWD'] = '12345678'
-app.config['SQL_SERVER_ENCRYPT'] = 'no' 
-app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes' 
-
-# --- CONFIGURACIÓN DE CORREO ---
+# --- CONFIGURACIÓN DE CORREO (ROQUE) ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'roquejos321@gmail.com'
-app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi'
+app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi' # Tu contraseña de aplicación
 
-# ... Resto de tus rutas y lógica ...
+# Swagger para documentar tu API
+app.config['SWAGGER'] = {
+    'title': 'TalentUPQ API - Roque',
+    'uiversion': 3
+}
+swagger = Swagger(app)
+
+# --- AQUÍ EMPIEZAN TUS RUTAS ---
+@app.route('/')
+def index():
+    return {"status": "API Corriendo en Dokploy", "db_connected": "Probablemente sí"}
+
+if __name__ == '__main__':
+    # Esto solo se usa para desarrollo local, Gunicorn ignorará esto en Docker
+    app.run(host='0.0.0.0', port=5000)
+
+
+
 
 
 
