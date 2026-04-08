@@ -42,7 +42,6 @@ app.config['DB_HOST'] = 'talent-upq-dbtalento-zkuf8m'
 app.config['DB_PORT'] = '5432'
 
 def get_db_connection():
-    """Función para conectar a PostgreSQL usando la configuración de la app"""
     conn = psycopg2.connect(
         dbname=app.config['DB_NAME'],
         user=app.config['DB_USER'],
@@ -472,7 +471,7 @@ def forgot_password():
             execute_query(
                 """UPDATE Usuarios SET 
                 ResetToken = ?, 
-                ResetTokenExpira = DATEADD(MINUTE, 10, GETDATE())
+                ResetTokenExpira = DATEADD(MINUTE, 10, NOW())
                 WHERE Email = ?""",
                 (codigo, email),
                 fetch=False
@@ -636,19 +635,6 @@ def role_required(role):
         return decorated_function
     return decorator
 
-
-def get_db_connection():
-    connection_string = (
-        f"DRIVER={{{app.config['SQL_SERVER_DRIVER']}}};"
-        f"SERVER={app.config['SQL_SERVER_SERVER']};"
-        f"DATABASE={app.config['SQL_SERVER_DATABASE']};"
-        f"UID={app.config['SQL_SERVER_UID']};"
-        f"PWD={app.config['SQL_SERVER_PWD']};"
-        f"Encrypt={app.config['SQL_SERVER_ENCRYPT']};"
-        f"TrustServerCertificate={app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE']};"
-    )
-    return pyodbc.connect(connection_string)
-
 def execute_query(query, params=None, fetch=True):
     conn = get_db_connection()
     # RealDictCursor permite acceder a los datos como usuario['Email'] en vez de usuario[0]
@@ -736,7 +722,7 @@ def get_admin_actual():
 def index():
 
     vacantes = execute_query(
-    "SELECT TOP 3 v.*, e.Nombre as EmpresaNombre FROM Vacantes v "
+    "SELECT LIMIT 3 v.*, e.Nombre as EmpresaNombre FROM Vacantes v "
     "JOIN Empresas e ON v.EmpresaID = e.EmpresaID "
     "WHERE v.Estatus = 'aprobada' ORDER BY v.FechaPublicacion DESC"
 )
@@ -955,7 +941,7 @@ def candidato_dashboard():
     
 
     experiencia_laboral = execute_query(
-        "SELECT TOP 1 * FROM ExperienciaLaboral WHERE CandidatoID = ? ORDER BY FechaIngreso DESC",
+        "SELECT LIMIT 1 * FROM ExperienciaLaboral WHERE CandidatoID = ? ORDER BY FechaIngreso DESC",
         (candidato_id,)
     )
     
@@ -975,7 +961,7 @@ def candidato_dashboard():
     
 
     postulaciones = execute_query(
-        "SELECT TOP 3 p.*, v.Puesto, e.Nombre as EmpresaNombre "
+        "SELECT LIMIT 3 p.*, v.Puesto, e.Nombre as EmpresaNombre "
         "FROM Postulaciones p "
         "JOIN Vacantes v ON p.VacanteID = v.VacanteID "
         "JOIN Empresas e ON v.EmpresaID = e.EmpresaID "
@@ -1838,7 +1824,6 @@ def candidato_ver_vacante(vacante_id):
     if not candidato:
         flash('Perfil de candidato no encontrado', 'error')
         return redirect(url_for('login'))
-    
 
     vacante = execute_query(
         """
@@ -1859,20 +1844,14 @@ def candidato_ver_vacante(vacante_id):
             v.Beneficios as beneficios,
             e.Nombre as empresa_nombre,
             e.Logo as empresa_logo,
-            STUFF((
-                SELECT ', ' + h.Nombre
-                FROM VacanteHabilidadesRequeridas vhr
-                JOIN Habilidades h ON vhr.HabilidadID = h.HabilidadID
-                WHERE vhr.VacanteID = v.VacanteID
-                FOR XML PATH('')
-            ), 1, 2, '') as habilidades_requeridas,
-            STUFF((
-                SELECT ', ' + h.Nombre
-                FROM VacanteHabilidadesOpcionales vho
-                JOIN Habilidades h ON vho.HabilidadID = h.HabilidadID
-                WHERE vho.VacanteID = v.VacanteID
-                FOR XML PATH('')
-            ), 1, 2, '') as habilidades_opcionales,
+            (SELECT STRING_AGG(h.Nombre, ', ') 
+             FROM VacanteHabilidadesRequeridas vhr 
+             JOIN Habilidades h ON vhr.HabilidadID = h.HabilidadID 
+             WHERE vhr.VacanteID = v.VacanteID) as habilidades_requeridas,
+            (SELECT STRING_AGG(h.Nombre, ', ') 
+             FROM VacanteHabilidadesOpcionales vho 
+             JOIN Habilidades h ON vho.HabilidadID = h.HabilidadID 
+             WHERE vho.VacanteID = v.VacanteID) as habilidades_opcionales,
             CASE WHEN EXISTS (
                 SELECT 1 FROM Postulaciones p 
                 WHERE p.VacanteID = v.VacanteID 
@@ -2201,7 +2180,7 @@ def empresa_dashboard():
 
     # Vacantes de la empresa
     vacantes_empresa = execute_query(
-        """SELECT TOP 3 v.*, 
+        """SELECT LIMIT 3 v.*, 
         (SELECT COUNT(*) FROM Postulaciones p WHERE p.VacanteID = v.VacanteID) as NumPostulaciones,
         CASE v.Estatus
             WHEN 'en_revision' THEN 'badge-warning'
@@ -2218,7 +2197,7 @@ def empresa_dashboard():
 
     # Postulaciones pendientes
     postulaciones_recientes = execute_query(
-        """SELECT TOP 3 p.*, c.Nombre as CandidatoNombre, 
+        """SELECT LIMIT 3 p.*, c.Nombre as CandidatoNombre, 
         c.ApellidoPaterno as CandidatoApellido, v.Puesto as VacantePuesto
         FROM Postulaciones p
         JOIN Candidatos c ON p.CandidatoID = c.CandidatoID
@@ -2242,7 +2221,7 @@ def empresa_dashboard():
     try:
         # Obtener las 5 conversaciones más recientes
         conversaciones_recientes = execute_query(
-            """SELECT TOP 5 
+            """SELECT LIMIT 5 
                c.ConversacionID,
                c.VacanteID,
                c.CandidatoID,
@@ -2251,10 +2230,10 @@ def empresa_dashboard():
                cand.Nombre as CandidatoNombre,
                cand.ApellidoPaterno as CandidatoApellido,
                cand.FotoPerfil as CandidatoFoto,
-               (SELECT TOP 1 Mensaje FROM Mensajes 
+               (SELECT LIMIT 1 Mensaje FROM Mensajes 
                 WHERE ConversacionID = c.ConversacionID 
                 ORDER BY FechaEnvio DESC) as UltimoMensaje,
-               (SELECT TOP 1 FechaEnvio FROM Mensajes 
+               (SELECT LIMIT 1 FechaEnvio FROM Mensajes 
                 WHERE ConversacionID = c.ConversacionID 
                 ORDER BY FechaEnvio DESC) as UltimoMensajeFecha,
                (SELECT COUNT(*) FROM Mensajes 
@@ -2428,7 +2407,7 @@ def empresa_nueva_vacante():
             
 
             nueva_vacante = execute_query(
-                "SELECT TOP 1 VacanteID FROM Vacantes WHERE EmpresaID = ? ORDER BY FechaPublicacion DESC",
+                "SELECT LIMIT 1 VacanteID FROM Vacantes WHERE EmpresaID = ? ORDER BY FechaPublicacion DESC",
                 (empresa['EmpresaID'],)
             )
             vacante_id = nueva_vacante[0]['VacanteID']
@@ -3069,7 +3048,7 @@ def admin_aprobar_vacante(vacante_id):
         execute_query(
             """UPDATE Vacantes SET 
             Estatus = 'aprobada', 
-            FechaAprobacion = GETDATE(),
+            FechaAprobacion = NOW(),
             ComentariosAdmin = 'Aprobada por el administrador'
             WHERE VacanteID = ?""",
             (vacante_id,),
@@ -3212,7 +3191,7 @@ def api_estadisticas():
                 SUM(CASE WHEN TipoUsuario = 'candidato' THEN 1 ELSE 0 END) as Candidatos,
                 SUM(CASE WHEN TipoUsuario = 'empresa' THEN 1 ELSE 0 END) as Empresas
             FROM Usuarios
-            WHERE FechaRegistro >= DATEADD(MONTH, -12, GETDATE())
+            WHERE FechaRegistro >= DATEADD(MONTH, -12, NOW())
             GROUP BY FORMAT(FechaRegistro, 'yyyy-MM')
             ORDER BY Mes ASC
         """)
@@ -3226,14 +3205,14 @@ def api_estadisticas():
                 SUM(CASE WHEN Estatus = 'rechazado' THEN 1 ELSE 0 END) as Rechazadas,
                 SUM(CASE WHEN Estatus = 'pendiente' THEN 1 ELSE 0 END) as Pendientes
             FROM Postulaciones
-            WHERE FechaPostulacion >= DATEADD(MONTH, -12, GETDATE())
+            WHERE FechaPostulacion >= DATEADD(MONTH, -12, NOW())
             GROUP BY FORMAT(FechaPostulacion, 'yyyy-MM')
             ORDER BY Mes ASC
         """)
         
         # Vacantes por empresa (top 10)
         vacantes_por_empresa = execute_query("""
-            SELECT TOP 10
+            SELECT LIMIT 10
                 e.Nombre as Empresa,
                 COUNT(v.VacanteID) as Total
             FROM Empresas e
@@ -3244,7 +3223,7 @@ def api_estadisticas():
         
         # Habilidades más demandadas
         habilidades_demandadas = execute_query("""
-            SELECT TOP 10
+            SELECT LIMIT 10
                 h.Nombre as Habilidad,
                 COUNT(vh.VacanteID) as TotalVacantes
             FROM Habilidades h
@@ -3606,7 +3585,7 @@ def crear_empresa():
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            cursor.execute("SELECT ISNULL(MAX(EmpresaID), 0) + 1 FROM Empresas")
+            cursor.execute("SELECT COALESCE(MAX(EmpresaID), 0) + 1 FROM Empresas")
             empresa_id = cursor.fetchone()[0]
             
             cursor.execute("""
@@ -3779,7 +3758,7 @@ def crear_candidato():
             cursor = conn.cursor()
             
 
-            cursor.execute("SELECT ISNULL(MAX(CandidatoID), 0) + 1 FROM Candidatos")
+            cursor.execute("SELECT COALESCE(MAX(CandidatoID), 0) + 1 FROM Candidatos")
             candidato_id = cursor.fetchone()[0]
             
    
@@ -4191,14 +4170,14 @@ def ver_conversacion(vacante_id, candidato_id):
     # Marcar mensajes como leídos
     if usuario_actual['TipoUsuario'] == 'empresa':
         execute_query(
-            """UPDATE Mensajes SET Leido = 1, FechaLectura = GETDATE()
+            """UPDATE Mensajes SET Leido = 1, FechaLectura = NOW()
                WHERE ConversacionID = ? AND RemitenteTipo = 'candidato' AND Leido = 0""",
             (conversacion['ConversacionID'],),
             fetch=False
         )
     else:
         execute_query(
-            """UPDATE Mensajes SET Leido = 1, FechaLectura = GETDATE()
+            """UPDATE Mensajes SET Leido = 1, FechaLectura = NOW()
                WHERE ConversacionID = ? AND RemitenteTipo = 'empresa' AND Leido = 0""",
             (conversacion['ConversacionID'],),
             fetch=False
@@ -4305,10 +4284,10 @@ def mis_conversaciones():
                v.Puesto as VacantePuesto,
                cand.Nombre as CandidatoNombre,
                cand.ApellidoPaterno as CandidatoApellido,
-               (SELECT TOP 1 Mensaje FROM Mensajes 
+               (SELECT LIMIT 1 Mensaje FROM Mensajes 
                 WHERE ConversacionID = c.ConversacionID 
                 ORDER BY FechaEnvio DESC) as UltimoMensaje,
-               (SELECT TOP 1 FechaEnvio FROM Mensajes 
+               (SELECT LIMIT 1 FechaEnvio FROM Mensajes 
                 WHERE ConversacionID = c.ConversacionID 
                 ORDER BY FechaEnvio DESC) as UltimoMensajeFecha,
                (SELECT COUNT(*) FROM Mensajes 
@@ -4333,10 +4312,10 @@ def mis_conversaciones():
             """SELECT c.*, 
                v.Puesto as VacantePuesto,
                e.Nombre as EmpresaNombre,
-               (SELECT TOP 1 Mensaje FROM Mensajes 
+               (SELECT LIMIT 1 Mensaje FROM Mensajes 
                 WHERE ConversacionID = c.ConversacionID 
                 ORDER BY FechaEnvio DESC) as UltimoMensaje,
-               (SELECT TOP 1 FechaEnvio FROM Mensajes 
+               (SELECT LIMIT 1 FechaEnvio FROM Mensajes 
                 WHERE ConversacionID = c.ConversacionID 
                 ORDER BY FechaEnvio DESC) as UltimoMensajeFecha,
                (SELECT COUNT(*) FROM Mensajes 
@@ -4373,7 +4352,7 @@ def marcar_leidos(conversacion_id):
         return redirect(request.referrer)
     
     execute_query(
-        """UPDATE Mensajes SET Leido = 1, FechaLectura = GETDATE()
+        """UPDATE Mensajes SET Leido = 1, FechaLectura = NOW()
            WHERE ConversacionID = ? AND RemitenteTipo = ? AND Leido = 0""",
         (conversacion_id, remitente_tipo),
         fetch=False
