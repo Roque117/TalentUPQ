@@ -40,7 +40,7 @@ CORS(app, origins='*')
 # --- CONFIGURACIÓN DE SQL SERVER (INTERNA DE DOCKER) ---
 # Importante: El host es 'sqlserver' porque así se llama tu servicio en el YAML
 app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
-app.config['SQL_SERVER_SERVER'] = 'sqlserver,1433' 
+app.config['SQL_SERVER_SERVER'] = '100.69.150.93,1433' 
 app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
 app.config['SQL_SERVER_UID'] = 'sa' 
 app.config['SQL_SERVER_PWD'] = '12345678'  # <--- Verifica que sea la misma en tu YAML
