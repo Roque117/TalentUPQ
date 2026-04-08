@@ -74,8 +74,19 @@ swagger = Swagger(app)
 
 @app.route('/')
 def index():
-    # ... código que busca vacantes ...
-    return render_template('index.html', ...)
+    # Buscamos las vacantes para mostrarlas en el inicio
+    try:
+        vacantes = execute_query(
+            "SELECT v.*, e.Nombre as EmpresaNombre FROM Vacantes v "
+            "JOIN Empresas e ON v.EmpresaID = e.EmpresaID "
+            "WHERE v.Estatus = 'aprobada' ORDER BY v.FechaPublicacion DESC LIMIT 3"
+        )
+    except Exception as e:
+        print(f"Error cargando vacantes: {e}")
+        vacantes = []
+
+    # AQUÍ ESTABA EL ERROR: Asegúrate de que NO tenga los tres puntos (...)
+    return render_template('index.html', usuario=get_usuario_actual(), vacantes=vacantes)
 
 @app.route('/enviar-correo-bienvenida')
 def enviar_correo_bienvenida(email_usuario, nombre_usuario, tipo_usuario):
