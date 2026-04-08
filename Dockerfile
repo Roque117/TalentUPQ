@@ -1,31 +1,24 @@
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalar dependencias del sistema para ODBC
+# Instalamos solo lo necesario para PostgreSQL
 RUN apt-get update && apt-get install -y \
+    libpq-dev \
     gcc \
-    g++ \
-    unixodbc-dev \
-    curl \
-    gnupg2 \
-    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y msodbcsql18
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copiar requirements.txt e instalar dependencias Python
+# Instalamos las librerías de Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto de la aplicación
+# Copiamos el resto de tu código
 COPY . .
 
-# Crear directorio para uploads
+# Creamos la carpeta de subidas
 RUN mkdir -p static/uploads
 
-# Exponer puerto
 EXPOSE 5000
 
-# Comando para ejecutar la app con Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "hello:app"]
+# Comando para arrancar la app
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "hello:app"]
