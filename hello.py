@@ -34,12 +34,11 @@ CORS(app, origins='*')
 
 # --- CONFIGURACIÓN DE POSTGRESQL (DOKPLOY) ---
 # IMPORTANTE: Asegúrate que en Dokploy el nombre de la DB sea exactamente 'BolsaTrabajoUPQ'
-app.config['DB_NAME'] = 'BolsaTrabajoUPQ'
-app.config['DB_USER'] = 'postgres'
-app.config['DB_PASS'] = 'TalentUPQ2026'
-# Host corregido según tu imagen:
-app.config['DB_HOST'] = 'talent-upq-dbtalento-zkuf8m' 
-app.config['DB_PORT'] = '5432'
+app.config['DB_NAME'] = os.getenv('DB_NAME', 'BolsaTrabajoUPQ')
+app.config['DB_USER'] = os.getenv('DB_USER', 'postgres')
+app.config['DB_PASS'] = os.getenv('DB_PASSWORD', 'TalentUPQ2026')
+app.config['DB_HOST'] = 'db'
+app.config['DB_PORT'] = os.getenv('DB_PORT', '5432')
 
 def get_db_connection():
     conn = psycopg2.connect(
