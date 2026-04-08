@@ -2,23 +2,21 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalamos solo lo necesario para PostgreSQL
+# Instalamos dependencias de sistema para Postgres
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalamos las librerías de Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiamos el resto de tu código
-COPY . .
+# --- NUEVA LÍNEA CRÍTICA PARA NLTK ---
+# Esto descarga los datos que tu código va a buscar al arrancar
+RUN python -m nltk.downloader punkt punkt_tab stopwords averaged_perceptron_tagger wordnet
 
-# Creamos la carpeta de subidas
+COPY . .
 RUN mkdir -p static/uploads
 
 EXPOSE 5000
-
-# Comando para arrancar la app
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "hello:app"]
