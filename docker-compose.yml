@@ -1,51 +1,24 @@
 version: '3.8'
 
-sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: talentupq_sqlserver
-    environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=${DB_PASSWORD}
-      - MSSQL_PID=Express
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlserver_data:/var/opt/mssql
-    networks:
-      - talentupq_network
-    restart: unless-stopped
-    # --- ESTO ES LO QUE TIENES QUE CAMBIAR ---
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${DB_PASSWORD} -Q 'SELECT 1' || exit 1"]
-      interval: 15s      # Revisa cada 15 segundos
-      timeout: 10s       # Espera hasta 10 segundos por respuesta
-      retries: 5         # Intenta 5 veces antes de marcar error
-      start_period: 45s  # LE DA 45 SEGUNDOS DE GRACIA PARA ARRANCAR ANTES DE EMPEZAR A REVISAR
-
+services:
   # API Flask
   flask_app:
     build: .
     container_name: talentupq_flask
     environment:
-      - DB_HOST=sqlserver
-      - DB_PORT=1433
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
       - SECRET_KEY=${SECRET_KEY}
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
       - FLASK_ENV=production
     ports:
       - "5000:5000"
-    depends_on:
-      sqlserver:
-        condition: service_healthy
     networks:
       - talentupq_network
     restart: unless-stopped
     volumes:
       - uploads_data:/app/static/uploads
+      # Este volumen guarda tu base de datos SQLite para que no se borre
+      - sqlite_data:/data
 
   # Cliente React
   react_app:
@@ -58,8 +31,8 @@ sqlserver:
     restart: unless-stopped
 
 volumes:
-  sqlserver_data:
   uploads_data:
+  sqlite_data:
 
 networks:
   talentupq_network:

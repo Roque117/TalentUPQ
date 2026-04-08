@@ -1,51 +1,54 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, current_app
+from flask import Flask, render_template, request, redirect, url_for, session, flash, current_app, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, date
-from flask import session 
 import os
 import re
 import uuid
 import time
-import pyodbc
+import sqlite3  # <--- Cambiamos pyodbc por sqlite3
 import traceback
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 import random
 import string
-import reportlab
-from flask import send_file
-from flask_cors import CORS
-from flasgger import Swagger, swag_from
-
-
-
-
-
-
-from flask import Flask
 from flask_cors import CORS
 from flasgger import Swagger
 
 app = Flask(__name__)
 
 # --- CONFIGURACIÓN DE CORS ---
-# Permitimos todos los orígenes para que React (puerto 3000) pueda hablar con Flask (puerto 5000)
 CORS(app, origins='*')
 
-# --- CONFIGURACIÓN DE SQL SERVER (INTERNA DE DOCKER) ---
-# Importante: El host es 'sqlserver' porque así se llama tu servicio en el YAML
-app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
-app.config['SQL_SERVER_SERVER'] = '10.0.2.15,1433' 
-app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
-app.config['SQL_SERVER_UID'] = 'sa' 
-app.config['SQL_SERVER_PWD'] = 'TalentUPQ2026!'  # <--- Verifica que sea la misma en tu YAML
-app.config['SQL_SERVER_ENCRYPT'] = 'no' 
-app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes' 
+# --- CONFIGURACIÓN DE SQLITE (ADIÓS AL TIMEOUT) ---
+# El archivo se guardará en /tmp para que no tengas problemas de permisos en Docker
+DB_PATH = '/tmp/BolsaTrabajoUPQ.db'
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# --- INICIALIZACIÓN DE LA BASE DE DATOS ---
+def init_db():
+    conn = get_db_connection()
+    # Aquí puedes agregar todas las tablas que necesites
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Ejecutar la creación de tablas al arrancar
+init_db()
 
 # --- CONFIGURACIÓN GENERAL ---
 app.secret_key = 'roque_bolsa_trabajo_key'
@@ -57,24 +60,46 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'roquejos321@gmail.com'
-app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi' # Tu contraseña de aplicación
+app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi'
 
 # Swagger para documentar tu API
 app.config['SWAGGER'] = {
-    'title': 'TalentUPQ API - Roque',
+    'title': 'TalentUPQ API - Roque (Versión SQLite)',
     'uiversion': 3
 }
 swagger = Swagger(app)
 
-# --- AQUÍ EMPIEZAN TUS RUTAS ---
+# --- RUTAS ---
+
 @app.route('/')
 def index():
-    return {"status": "API Corriendo en Dokploy", "db_connected": "Probablemente sí"}
+    try:
+        conn = get_db_connection()
+        conn.close()
+        db_status = "Conectado a SQLite localmente"
+    except Exception as e:
+        db_status = f"Error: {str(e)}"
+    
+    return {
+        "status": "API Corriendo en Dokploy",
+        "database": db_status,
+        "message": "Misión cumplida, Roque. Sin errores de red."
+    }
+
+# Ejemplo de ruta para probar la DB
+@app.route('/test_db')
+def test_db():
+    conn = get_db_connection()
+    usuarios = conn.execute('SELECT * FROM usuarios').fetchall()
+    conn.close()
+    return jsonify([dict(ix) for ix in usuarios])
 
 if __name__ == '__main__':
-    # Esto solo se usa para desarrollo local, Gunicorn ignorará esto en Docker
+    # Asegurarse de que la carpeta de subidas existe
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
+    
     app.run(host='0.0.0.0', port=5000)
-
 
 
 
