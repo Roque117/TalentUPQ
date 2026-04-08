@@ -37,7 +37,8 @@ CORS(app, origins='*')
 app.config['DB_NAME'] = 'BolsaTrabajoUPQ'
 app.config['DB_USER'] = 'postgres'
 app.config['DB_PASS'] = 'TalentUPQ2026'
-app.config['DB_HOST'] = 'talent-upq-dbtalento' 
+# Host corregido según tu imagen:
+app.config['DB_HOST'] = 'talent-upq-dbtalento-zkuf8m' 
 app.config['DB_PORT'] = '5432'
 
 def get_db_connection():
