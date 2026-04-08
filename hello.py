@@ -720,14 +720,12 @@ def get_admin_actual():
 
 @app.route('/')
 def index():
-
+    # El LIMIT 3 se mueve al final de la consulta
     vacantes = execute_query(
-    "SELECT LIMIT 3 v.*, e.Nombre as EmpresaNombre FROM Vacantes v "
-    "JOIN Empresas e ON v.EmpresaID = e.EmpresaID "
-    "WHERE v.Estatus = 'aprobada' ORDER BY v.FechaPublicacion DESC"
-)
-
-
+        "SELECT v.*, e.Nombre as EmpresaNombre FROM Vacantes v "
+        "JOIN Empresas e ON v.EmpresaID = e.EmpresaID "
+        "WHERE v.Estatus = 'aprobada' ORDER BY v.FechaPublicacion DESC LIMIT 3"
+    )
     return render_template('index.html', usuario=get_usuario_actual(), vacantes=vacantes)
 
 ##################################################################################################
@@ -941,7 +939,7 @@ def candidato_dashboard():
     
 
     experiencia_laboral = execute_query(
-        "SELECT LIMIT 1 * FROM ExperienciaLaboral WHERE CandidatoID = ? ORDER BY FechaIngreso DESC",
+        "SELECT * FROM ExperienciaLaboral WHERE CandidatoID = ? ORDER BY FechaIngreso DESC LIMIT 1",
         (candidato_id,)
     )
     
@@ -961,12 +959,12 @@ def candidato_dashboard():
     
 
     postulaciones = execute_query(
-        "SELECT LIMIT 3 p.*, v.Puesto, e.Nombre as EmpresaNombre "
+        "SELECT p.*, v.Puesto, e.Nombre as EmpresaNombre "
         "FROM Postulaciones p "
         "JOIN Vacantes v ON p.VacanteID = v.VacanteID "
         "JOIN Empresas e ON v.EmpresaID = e.EmpresaID "
         "WHERE p.CandidatoID = ? "
-        "ORDER BY p.FechaPostulacion DESC",
+        "ORDER BY p.FechaPostulacion DESC LIMIT 3", # <--- LIMIT va aquí al final
         (candidato_id,)
     )
     
@@ -2179,8 +2177,9 @@ def empresa_dashboard():
         return redirect(url_for('login'))
 
     # Vacantes de la empresa
+# Vacantes de la empresa
     vacantes_empresa = execute_query(
-        """SELECT LIMIT 3 v.*, 
+        """SELECT v.*, 
         (SELECT COUNT(*) FROM Postulaciones p WHERE p.VacanteID = v.VacanteID) as NumPostulaciones,
         CASE v.Estatus
             WHEN 'en_revision' THEN 'badge-warning'
@@ -2191,19 +2190,19 @@ def empresa_dashboard():
         END as EstadoClase
         FROM Vacantes v
         WHERE v.EmpresaID = ?
-        ORDER BY v.FechaPublicacion DESC""",
+        ORDER BY v.FechaPublicacion DESC LIMIT 3""", # <--- LIMIT va aquí
         (empresa['EmpresaID'],)
     )
 
-    # Postulaciones pendientes
+# Postulaciones pendientes
     postulaciones_recientes = execute_query(
-        """SELECT LIMIT 3 p.*, c.Nombre as CandidatoNombre, 
+        """SELECT p.*, c.Nombre as CandidatoNombre, 
         c.ApellidoPaterno as CandidatoApellido, v.Puesto as VacantePuesto
         FROM Postulaciones p
         JOIN Candidatos c ON p.CandidatoID = c.CandidatoID
         JOIN Vacantes v ON p.VacanteID = v.VacanteID
         WHERE v.EmpresaID = ? AND p.Estatus = 'pendiente'
-        ORDER BY p.FechaPostulacion DESC""",
+        ORDER BY p.FechaPostulacion DESC LIMIT 3""", # <--- LIMIT va aquí
         (empresa['EmpresaID'],)
     )
 
@@ -2221,30 +2220,30 @@ def empresa_dashboard():
     try:
         # Obtener las 5 conversaciones más recientes
         conversaciones_recientes = execute_query(
-            """SELECT LIMIT 5 
-               c.ConversacionID,
-               c.VacanteID,
-               c.CandidatoID,
-               c.FechaInicio,
-               v.Puesto as VacantePuesto,
-               cand.Nombre as CandidatoNombre,
-               cand.ApellidoPaterno as CandidatoApellido,
-               cand.FotoPerfil as CandidatoFoto,
-               (SELECT LIMIT 1 Mensaje FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                ORDER BY FechaEnvio DESC) as UltimoMensaje,
-               (SELECT LIMIT 1 FechaEnvio FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                ORDER BY FechaEnvio DESC) as UltimoMensajeFecha,
-               (SELECT COUNT(*) FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                AND RemitenteTipo = 'candidato' 
-                AND Leido = 0) as NoLeidos
-               FROM Conversaciones c
-               JOIN Vacantes v ON c.VacanteID = v.VacanteID
-               JOIN Candidatos cand ON c.CandidatoID = cand.CandidatoID
-               WHERE c.EmpresaID = ? AND c.Activa = 1
-               ORDER BY UltimoMensajeFecha DESC""",
+            """SELECT 
+                c.ConversacionID,
+                c.VacanteID,
+                c.CandidatoID,
+                c.FechaInicio,
+                v.Puesto as VacantePuesto,
+                cand.Nombre as CandidatoNombre,
+                cand.ApellidoPaterno as CandidatoApellido,
+                cand.FotoPerfil as CandidatoFoto,
+                (SELECT Mensaje FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 ORDER BY FechaEnvio DESC LIMIT 1) as UltimoMensaje,
+                (SELECT FechaEnvio FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 ORDER BY FechaEnvio DESC LIMIT 1) as UltimoMensajeFecha,
+                (SELECT COUNT(*) FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 AND RemitenteTipo = 'candidato' 
+                 AND Leido = 0) as NoLeidos
+                FROM Conversaciones c
+                JOIN Vacantes v ON c.VacanteID = v.VacanteID
+                JOIN Candidatos cand ON c.CandidatoID = cand.CandidatoID
+                WHERE c.EmpresaID = ? AND c.Activa = 1
+                ORDER BY UltimoMensajeFecha DESC LIMIT 5""", # <--- LIMIT 5 del query principal
             (empresa['EmpresaID'],)
         )
         
@@ -2407,7 +2406,7 @@ def empresa_nueva_vacante():
             
 
             nueva_vacante = execute_query(
-                "SELECT LIMIT 1 VacanteID FROM Vacantes WHERE EmpresaID = ? ORDER BY FechaPublicacion DESC",
+                "SELECT VacanteID FROM Vacantes WHERE EmpresaID = ? ORDER BY FechaPublicacion DESC LIMIT 1",
                 (empresa['EmpresaID'],)
             )
             vacante_id = nueva_vacante[0]['VacanteID']
@@ -3210,26 +3209,26 @@ def api_estadisticas():
             ORDER BY Mes ASC
         """)
         
-        # Vacantes por empresa (top 10)
+# Vacantes por empresa (top 10)
         vacantes_por_empresa = execute_query("""
-            SELECT LIMIT 10
+            SELECT 
                 e.Nombre as Empresa,
                 COUNT(v.VacanteID) as Total
             FROM Empresas e
             LEFT JOIN Vacantes v ON e.EmpresaID = v.EmpresaID
             GROUP BY e.Nombre
-            ORDER BY Total DESC
+            ORDER BY Total DESC LIMIT 10
         """)
         
-        # Habilidades más demandadas
+# Habilidades más demandadas
         habilidades_demandadas = execute_query("""
-            SELECT LIMIT 10
+            SELECT 
                 h.Nombre as Habilidad,
                 COUNT(vh.VacanteID) as TotalVacantes
             FROM Habilidades h
             LEFT JOIN VacanteHabilidadesRequeridas vh ON h.HabilidadID = vh.HabilidadID
             GROUP BY h.Nombre
-            ORDER BY TotalVacantes DESC
+            ORDER BY TotalVacantes DESC LIMIT 10
         """)
         
         # Estado de vacantes
@@ -4281,24 +4280,24 @@ def mis_conversaciones():
         
         conversaciones = execute_query(
             """SELECT c.*, 
-               v.Puesto as VacantePuesto,
-               cand.Nombre as CandidatoNombre,
-               cand.ApellidoPaterno as CandidatoApellido,
-               (SELECT LIMIT 1 Mensaje FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                ORDER BY FechaEnvio DESC) as UltimoMensaje,
-               (SELECT LIMIT 1 FechaEnvio FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                ORDER BY FechaEnvio DESC) as UltimoMensajeFecha,
-               (SELECT COUNT(*) FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                AND RemitenteTipo = 'candidato' 
-                AND Leido = 0) as NoLeidos
-               FROM Conversaciones c
-               JOIN Vacantes v ON c.VacanteID = v.VacanteID
-               JOIN Candidatos cand ON c.CandidatoID = cand.CandidatoID
-               WHERE c.EmpresaID = ?
-               ORDER BY UltimoMensajeFecha DESC""",
+                v.Puesto as VacantePuesto,
+                cand.Nombre as CandidatoNombre,
+                cand.ApellidoPaterno as CandidatoApellido,
+                (SELECT Mensaje FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 ORDER BY FechaEnvio DESC LIMIT 1) as UltimoMensaje,
+                (SELECT FechaEnvio FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 ORDER BY FechaEnvio DESC LIMIT 1) as UltimoMensajeFecha,
+                (SELECT COUNT(*) FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 AND RemitenteTipo = 'candidato' 
+                 AND Leido = 0) as NoLeidos
+                FROM Conversaciones c
+                JOIN Vacantes v ON c.VacanteID = v.VacanteID
+                JOIN Candidatos cand ON c.CandidatoID = cand.CandidatoID
+                WHERE c.EmpresaID = ?
+                ORDER BY UltimoMensajeFecha DESC""",
             (empresa['EmpresaID'],)
         )
         
@@ -4310,25 +4309,26 @@ def mis_conversaciones():
         
         conversaciones = execute_query(
             """SELECT c.*, 
-               v.Puesto as VacantePuesto,
-               e.Nombre as EmpresaNombre,
-               (SELECT LIMIT 1 Mensaje FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                ORDER BY FechaEnvio DESC) as UltimoMensaje,
-               (SELECT LIMIT 1 FechaEnvio FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                ORDER BY FechaEnvio DESC) as UltimoMensajeFecha,
-               (SELECT COUNT(*) FROM Mensajes 
-                WHERE ConversacionID = c.ConversacionID 
-                AND RemitenteTipo = 'empresa' 
-                AND Leido = 0) as NoLeidos
-               FROM Conversaciones c
-               JOIN Vacantes v ON c.VacanteID = v.VacanteID
-               JOIN Empresas e ON c.EmpresaID = e.EmpresaID
-               WHERE c.CandidatoID = ?
-               ORDER BY UltimoMensajeFecha DESC""",
+                v.Puesto as VacantePuesto,
+                e.Nombre as EmpresaNombre,
+                (SELECT Mensaje FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 ORDER BY FechaEnvio DESC LIMIT 1) as UltimoMensaje,
+                (SELECT FechaEnvio FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 ORDER BY FechaEnvio DESC LIMIT 1) as UltimoMensajeFecha,
+                (SELECT COUNT(*) FROM Mensajes 
+                 WHERE ConversacionID = c.ConversacionID 
+                 AND RemitenteTipo = 'empresa' 
+                 AND Leido = 0) as NoLeidos
+                FROM Conversaciones c
+                JOIN Vacantes v ON c.VacanteID = v.VacanteID
+                JOIN Empresas e ON c.EmpresaID = e.EmpresaID
+                WHERE c.CandidatoID = ?
+                ORDER BY UltimoMensajeFecha DESC""",
             (candidato['CandidatoID'],)
         )
+        
     else:
         flash('Acceso no autorizado', 'error')
         return redirect(url_for('index'))
