@@ -1,127 +1,80 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, current_app, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, date
+from flask import session 
 import os
-import sqlite3
+import re
+import uuid
+import time
+import pyodbc
 import traceback
 from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+import random
+import string
+import reportlab
+from flask import send_file
+from flask_cors import CORS
+from flasgger import Swagger, swag_from
+
+
+
+
+
+
+from flask import Flask
 from flask_cors import CORS
 from flasgger import Swagger
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000'])
 
-# --- CONFIGURACIÓN DE RUTAS ---
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+# --- CONFIGURACIÓN DE CORS ---
+# Permitimos todos los orígenes para que React (puerto 3000) pueda hablar con Flask (puerto 5000)
+CORS(app, origins='*')
+
+# --- CONFIGURACIÓN DE SQL SERVER (INTERNA DE DOCKER) ---
+# Importante: El host es 'sqlserver' porque así se llama tu servicio en el YAML
+app.config['SQL_SERVER_DRIVER'] = 'ODBC Driver 18 for SQL Server'
+app.config['SQL_SERVER_SERVER'] = '10.0.2.15,1433' 
+app.config['SQL_SERVER_DATABASE'] = 'BolsaTrabajoUPQ'
+app.config['SQL_SERVER_UID'] = 'sa' 
+app.config['SQL_SERVER_PWD'] = 'TalentUPQ2026!'  # <--- Verifica que sea la misma en tu YAML
+app.config['SQL_SERVER_ENCRYPT'] = 'no' 
+app.config['SQL_SERVER_TRUST_SERVER_CERTIFICATE'] = 'yes' 
+
+# --- CONFIGURACIÓN GENERAL ---
 app.secret_key = 'roque_bolsa_trabajo_key'
-DB_PATH = '/data/BolsaTrabajoUPQ.db' # Ruta que definimos en el YAML
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'png', 'jpg', 'jpeg'}
 
-# --- FUNCIÓN DE CONEXIÓN A SQLITE ---
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row # Para que devuelva diccionarios
-    return conn
+# --- CONFIGURACIÓN DE CORREO (ROQUE) ---
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'roquejos321@gmail.com'
+app.config['MAIL_PASSWORD'] = 'dfuj irmu vqov hpzi' # Tu contraseña de aplicación
 
-# --- DECORADOR LOGIN REQUIRED ---
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'usuario_id' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
+# Swagger para documentar tu API
+app.config['SWAGGER'] = {
+    'title': 'TalentUPQ API - Roque',
+    'uiversion': 3
+}
+swagger = Swagger(app)
 
-# --- HELPERS (Simulados para que no truene tu código) ---
-def get_usuario_actual():
-    return session.get('usuario')
-
-def get_empresa_actual():
-    if session.get('usuario') and session['usuario']['TipoUsuario'] == 'empresa':
-        conn = get_db_connection()
-        empresa = conn.execute("SELECT * FROM Empresas WHERE UsuarioID = ?", (session['usuario']['UsuarioID'],)).fetchone()
-        conn.close()
-        return empresa
-    return None
-
-def get_candidato_actual():
-    if session.get('usuario') and session['usuario']['TipoUsuario'] == 'candidato':
-        conn = get_db_connection()
-        candidato = conn.execute("SELECT * FROM Candidatos WHERE UsuarioID = ?", (session['usuario']['UsuarioID'],)).fetchone()
-        conn.close()
-        return candidato
-    return None
-
-# --- RUTAS DE ADMINISTRACIÓN (CANDIDATOS) ---
-
-@app.route('/admin/candidatos/editar/<int:candidato_id>', methods=['GET', 'POST'])
-def editar_candidato(candidato_id):
-    conn = get_db_connection()
-    if request.method == 'POST':
-        # ... (Tu lógica de POST se mantiene igual, solo cambia cursor.execute por conn.execute)
-        try:
-            # Lógica simplificada para el ejemplo
-            conn.execute("UPDATE Candidatos SET Nombre = ? WHERE CandidatoID = ?", (request.form['nombre'], candidato_id))
-            conn.commit()
-            flash('Actualizado', 'success')
-            return redirect(url_for('admin_candidatos'))
-        except Exception as e:
-            flash(str(e), 'error')
-    
-    candidato = conn.execute("SELECT * FROM Candidatos WHERE CandidatoID = ?", (candidato_id,)).fetchone()
-    conn.close()
-    return render_template('admin/editar_candidato.html', candidato=candidato)
-
-# --- SISTEMA DE MENSAJERÍA (CONVERTIDO A SQLITE) ---
-
-@app.route('/conversacion/<int:vacante_id>/<int:candidato_id>')
-@login_required
-def ver_conversacion(vacante_id, candidato_id):
-    conn = get_db_connection()
-    # Cambiamos GETDATE() por datetime.now() de SQLite
-    conversacion = conn.execute("SELECT * FROM Conversaciones WHERE VacanteID = ? AND CandidatoID = ?", (vacante_id, candidato_id)).fetchone()
-    
-    if not conversacion:
-        # Lógica para crear conversacion si no existe
-        pass
-
-    mensajes = conn.execute("""
-        SELECT m.* FROM Mensajes m WHERE m.ConversacionID = ? ORDER BY m.FechaEnvio ASC
-    """, (conversacion['ConversacionID'] if conversacion else 0,)).fetchall()
-    
-    conn.close()
-    return render_template('mensajeria/conversacion.html', mensajes=mensajes)
-
-# --- API PÚBLICA PARA REACT (SQLITE) ---
-
-@app.route('/api/v1/vacantes', methods=['GET'])
-def api_vacantes():
-    try:
-        conn = get_db_connection()
-        vacantes = conn.execute("""
-            SELECT v.VacanteID, v.Puesto, v.Modalidad, v.Salario, v.Ubicacion
-            FROM Vacantes v WHERE v.Estatus = 'aprobada'
-        """).fetchall()
-        conn.close()
-        return jsonify([dict(ix) for ix in vacantes])
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# --- INICIALIZACIÓN ---
+# --- AQUÍ EMPIEZAN TUS RUTAS ---
+@app.route('/')
+def index():
+    return {"status": "API Corriendo en Dokploy", "db_connected": "Probablemente sí"}
 
 if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    # Crear carpeta para la DB si no existe
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    
-    try:
-        conn = get_db_connection()
-        print("✅ Conexión exitosa a SQLite")
-        conn.close()
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-    
+    # Esto solo se usa para desarrollo local, Gunicorn ignorará esto en Docker
     app.run(host='0.0.0.0', port=5000)
+
 
 
 
