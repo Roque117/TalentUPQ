@@ -4639,23 +4639,18 @@ def inject_current_year():
     return {'current_year': datetime.now().year}
 
 if __name__ == '__main__':
-
+    # Creamos la carpeta de subidas si no existe
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-
+    # Probamos la conexión antes de arrancar
     try:
         conn = get_db_connection()
         print("✅ Conexión exitosa a la base de datos")
         conn.close()
     except Exception as e:
         print(f"❌ Error al conectar a la base de datos: {str(e)}")
-        exit(1)
-    
-    app.run(debug=True)
+        # No salimos con exit(1) para que el debug mode nos deje ver el error en el navegador
 
-
-if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    # Importante: debug=True para que el log te diga errores de código
+    # EL ÚNICO ARRANQUE: Configurado para Dokploy (0.0.0.0) y con Debug activo
     app.run(host='0.0.0.0', port=5000, debug=True)
     
