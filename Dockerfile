@@ -2,29 +2,30 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Paso 1: Instalar herramientas básicas de red y compilación
+# Instalar dependencias del sistema para ODBC
 RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg2 \
     gcc \
     g++ \
     unixodbc-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Paso 2: Configurar el repositorio de Microsoft e instalar el driver ODBC
-RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
-    && curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    curl \
+    gnupg2 \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y msodbcsql18
 
-# Paso 3: Instalar dependencias de Python
+# Copiar requirements.txt e instalar dependencias Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Paso 4: Copiar el resto del código
+# Copiar el resto de la aplicación
 COPY . .
+
+# Crear directorio para uploads
 RUN mkdir -p static/uploads
 
+# Exponer puerto
 EXPOSE 5000
 
-CMD ["python", "hello.py"]
+# Comando para ejecutar la app con Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "hello:app"]
