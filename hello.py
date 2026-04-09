@@ -36,7 +36,7 @@ CORS(app, origins='*')
 # IMPORTANTE: Asegúrate que en Dokploy el nombre de la DB sea exactamente 'BolsaTrabajoUPQ'
 
 # Configuración con prioridad a variables de entorno, pero con los "fallbacks" que ya probamos
-app.config['DB_NAME'] = os.getenv('DB_NAME', 'postgres')
+app.config['DB_NAME'] = os.getenv('DB_NAME', 'BolsaTrabajoUPQ')
 app.config['DB_USER'] = os.getenv('DB_USER', 'dokploy')
 app.config['DB_PASS'] = os.getenv('DB_PASSWORD', 'TalentUPQ2026')
 app.config['DB_HOST'] = os.getenv('DB_HOST', 'talent-upq-dbtalento-7jpnxd')
