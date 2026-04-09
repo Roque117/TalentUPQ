@@ -37,7 +37,7 @@ CORS(app, origins='*')
 app.config['DB_NAME'] = os.getenv('DB_NAME', 'BolsaTrabajoUPQ')
 app.config['DB_USER'] = os.getenv('DB_USER', 'postgres')
 app.config['DB_PASS'] = os.getenv('DB_PASSWORD', 'TalentUPQ2026')
-app.config['DB_HOST'] = 'talent-upq-dbtalento-zkuf8m'
+app.config['DB_HOST'] = 'dbtalento'
 app.config['DB_PORT'] = os.getenv('DB_PORT', '5432')
 
 def get_db_connection():
