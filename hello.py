@@ -4601,6 +4601,35 @@ def api_docs():
     return redirect('/apidocs')
 
 
+
+
+
+  # --- Al final de tu hello.py ---
+
+def ejecutar_migracion_inicial():
+    try:
+        from migrar import migrar_completo
+        print("🚀 Dokploy detectó inicio: Ejecutando migración de tablas...")
+        migrar_completo()
+        print("✅ Tablas verificadas/creadas con éxito.")
+    except Exception as e:
+        print(f"⚠️ Nota de migración: {e}")
+
+# Llamamos a la función
+ejecutar_migracion_inicial()
+
+if __name__ == '__main__':
+    # Importante: En producción Dokploy usa Gunicorn/Uvicorn, 
+    # pero al importar el archivo arriba se ejecutará la migración.
+    app.run()
+
+
+
+
+
+
+
+
 @app.context_processor
 def inject_current_year():
     return {'current_year': datetime.now().year}
@@ -4622,3 +4651,6 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
     
+
+
+  

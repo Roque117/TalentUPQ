@@ -2,18 +2,17 @@ import psycopg2
 from psycopg2 import sql
 
 def migrar_completo():
+    # --- CONFIGURACIÓN CORREGIDA PARA TU NUEVA DB ---
     config = {
         "dbname": "BolsaTrabajoUPQ",
         "user": "postgres",
         "password": "TalentUPQ2026",
-        "host": "talent-upq-dbtalento-zkuf8m",
+        "host": "talent-upq-dbtalento", # <--- Este es el nombre del servicio que creaste
         "port": "5432"
     }
 
-    # El SQL completo convertido de SQL Server a PostgreSQL
-    # Se cambiaron NVARCHAR -> VARCHAR, DATETIME -> TIMESTAMP, IDENTITY -> SERIAL, BIT -> BOOLEAN
     sql_script = """
-    -- Limpieza (Opcional: Borra si quieres empezar de cero absoluto)
+    -- Limpieza
     DROP TABLE IF EXISTS Mensajes, Conversaciones, VacantesAprobadas, VacantesRevision, Notificaciones, Postulaciones, 
     VacanteHabilidadesOpcionales, VacanteHabilidadesRequeridas, Vacantes, CandidatoCompetencias, Competencias, 
     CandidatoHabilidades, Habilidades, Referencias, ExperienciaLaboral, PreparacionAcademica, Administradores, 
@@ -205,12 +204,10 @@ def migrar_completo():
         FechaLectura TIMESTAMP NULL
     );
 
-    -- Índices
     CREATE INDEX IX_Mensajes_Conversacion ON Mensajes(ConversacionID);
     CREATE INDEX IX_Mensajes_Leido ON Mensajes(Leido);
     CREATE INDEX IX_Conversaciones_Vacante ON Conversaciones(VacanteID);
 
-    -- Datos Iniciales
     INSERT INTO Usuarios (Email, PasswordHash, TipoUsuario) VALUES 
     ('admin@upq.edu.mx', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'admin'),
     ('candidato@example.com', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'candidato'),
@@ -227,14 +224,15 @@ def migrar_completo():
     try:
         conn = psycopg2.connect(**config)
         cur = conn.cursor()
-        print("Borrando y creando TODAS las tablas (18 tablas)...")
+        print("🚀 Conectado a la base de datos...")
+        print("🏗️ Borrando y creando TODAS las tablas (18 tablas)...")
         cur.execute(sql_script)
         conn.commit()
-        print("¡ÉXITO TOTAL! Tu base de datos está completa y lista.")
+        print("✅ ¡ÉXITO TOTAL! Tu base de datos está completa y lista.")
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Error fatal: {e}")
+        print(f"❌ Error fatal: {e}")
 
 if __name__ == "__main__":
     migrar_completo()
