@@ -7,7 +7,7 @@ def migrar_completo():
         "dbname": "BolsaTrabajoUPQ",
         "user": "postgres",
         "password": "TalentUPQ2026",
-        "host": "talent-upq-dbtalento", # <--- Este es el nombre del servicio que creaste
+        "host": "dbtalento", # <--- Este es el nombre del servicio que creaste
         "port": "5432"
     }
 
