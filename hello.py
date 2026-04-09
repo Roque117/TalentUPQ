@@ -34,11 +34,13 @@ CORS(app, origins='*')
 
 # --- CONFIGURACIÓN DE POSTGRESQL (DOKPLOY) ---
 # IMPORTANTE: Asegúrate que en Dokploy el nombre de la DB sea exactamente 'BolsaTrabajoUPQ'
-app.config['DB_NAME'] = 'postgres'          # <--- CAMBIADO (BolsaTrabajoUPQ no funcionaba, usa postgres que es el default)
-app.config['DB_USER'] = 'dokploy'           # <--- CAMBIADO (postgres no funcionaba)
-app.config['DB_PASS'] = 'TalentUPQ2026'     # <--- LA QUE RESETEAMOS
-app.config['DB_HOST'] = '10.0.1.159'        # <--- LA IP DE LA RED INTERNA
-app.config['DB_PORT'] = '5432'
+
+# Configuración con prioridad a variables de entorno, pero con los "fallbacks" que ya probamos
+app.config['DB_NAME'] = os.getenv('DB_NAME', 'postgres')
+app.config['DB_USER'] = os.getenv('DB_USER', 'dokploy')
+app.config['DB_PASS'] = os.getenv('DB_PASSWORD', 'TalentUPQ2026')
+app.config['DB_HOST'] = os.getenv('DB_HOST', 'talent-upq-dbtalento-7jpnxd')
+app.config['DB_PORT'] = os.getenv('DB_PORT', '5432')
 
 def get_db_connection():
     conn = psycopg2.connect(
