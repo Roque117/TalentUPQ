@@ -44,12 +44,14 @@ app.config['DB_HOST'] = os.getenv('DB_HOST', 'talent-upq-dbtalento-7jpnxd')
 app.config['DB_PORT'] = os.getenv('DB_PORT', '5432')
 
 def get_db_connection():
+    # Intentamos leer de las variables de Dokploy, 
+    # pero si fallan, usamos los valores que SÍ funcionaron en la terminal.
     conn = psycopg2.connect(
-        dbname=app.config['DB_NAME'],
-        user=app.config['DB_USER'],
-        password=app.config['DB_PASS'], # Aquí usamos la llave que definimos arriba
-        host=app.config['DB_HOST'],
-        port=app.config['DB_PORT']
+        host=os.getenv('DB_HOST', 'talent-upq-dbtalento-7jpnxd'),
+        database=os.getenv('DB_NAME', 'dokploy'),    # Aquí usamos 'dokploy'
+        user=os.getenv('DB_USER', 'dokploy'),        # Aquí usamos 'dokploy'
+        password=os.getenv('DB_PASSWORD', 'TalentUPQ2026'),
+        port=os.getenv('DB_PORT', '5432')
     )
     return conn
 
