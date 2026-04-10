@@ -44,11 +44,11 @@ app.config['DB_PORT'] = os.getenv('DB_PORT', '5432')
 
 def get_db_connection():
     conn = psycopg2.connect(
-        dbname=app.config['DB_NAME'],
-        user=app.config['DB_USER'],
-        password=app.config['DB_PASS'],
-        host=app.config['DB_HOST'],
-        port=app.config['DB_PORT']
+        host=os.getenv('DB_HOST', 'dokploy-postgres'),
+        database=os.getenv('DB_NAME', 'dokploy'),
+        user=os.getenv('DB_USER', 'dokploy'),
+        password=os.getenv('DB_PASSWORD', 'dokploy'),
+        port=os.getenv('DB_PORT', '5432')
     )
     return conn
 
