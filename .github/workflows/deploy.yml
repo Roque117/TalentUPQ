@@ -30,7 +30,7 @@ jobs:
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
-      - name: SSH
+      - name: SSH y Limpieza Forzosa
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -38,27 +38,37 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ${{ secrets.PROJECT_PATH }}
-            # Guardar el ID del commit actual por si el nuevo falla
+            # Guardar el ID del commit actual por si hay que volver atrás
             OLD_COMMIT=$(git rev-parse HEAD)
             
             if git pull origin main; then
-                # Intentar levantar la nueva versión
+                echo "--- PASO 1: LIMPIEZA DE PUERTOS ---"
+                # Detenemos todo para asegurar que el puerto 5001 quede libre
+                sudo docker compose down --remove-orphans
+                # Matar cualquier proceso rebelde que se haya quedado en el 5001
+                sudo fuser -k 5001/tcp || true
+                
+                echo "--- PASO 2: DESPLIEGUE NUEVA VERSIÓN ---"
                 if sudo docker compose up -d --build; then
-                    echo "Validando estabilidad del contenedor..."
-                    sleep 15
-                    # Verificar si el contenedor de Flask sigue corriendo
+                    echo "Validando estabilidad (30s)..."
+                    sleep 30
+                    
+                    # Revisamos si el contenedor de Flask está corriendo realmente
                     STATUS=$(sudo docker inspect -f '{{.State.Running}}' talentupq_flask 2>/dev/null || echo "false")
                     
                     if [ "$STATUS" == "false" ]; then
-                        echo "⚠️ NUEVA VERSIÓN FALLÓ. Aplicando Rollback..."
+                        echo "⚠️ LA NUEVA VERSIÓN FALLÓ. Aplicando Rollback..."
                         git checkout $OLD_COMMIT
+                        sudo docker compose down
                         sudo docker compose up -d --build
                         exit 1
                     fi
-                    echo "Despliegue exitoso."
+                    echo "🚀 Despliegue exitoso en puerto 5001."
                 else
-                    echo "Error en Build. Revirtiendo..."
+                    echo "❌ Error en Build. Revirtiendo al commit anterior..."
                     git checkout $OLD_COMMIT
+                    sudo docker compose down
+                    sudo docker compose up -d --build
                     exit 1
                 fi
             fi
