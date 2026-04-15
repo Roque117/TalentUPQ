@@ -4,7 +4,6 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, date
 import os
 import re
-sfjundsgijg
 import uuid
 import time
 import psycopg2 
