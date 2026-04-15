@@ -29,20 +29,28 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - FLASK_ENV=production
     ports:
-      - "5000:5000"
+      - "5001:5001" # <-- Cambiado a 5001 que es el que usas
     depends_on:
       db:
         condition: service_healthy
     networks:
       - talentupq_network
     restart: unless-stopped
+    
+    # --- ESTO ES LO QUE MANTIENE LA APP ARRIBA ---
+    deploy:
+      update_config:
+        order: start-first    # Primero levanta el nuevo, luego mata el viejo
+        failure_action: rollback
+    
     healthcheck:
-      # Verifica que el puerto 5000 responda
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/"] # <-- Cambiado a 5001
       interval: 20s
       timeout: 10s
       retries: 3
       start_period: 30s
+    # ---------------------------------------------
+
     volumes:
       - uploads_data:/app/static/uploads
 
