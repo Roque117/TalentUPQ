@@ -1,45 +1,34 @@
-name: Deploy TalentUPQ via Tailscale
+name: Deploy TalentUPQ
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  # --- BLOQUE 1: EL INSPECTOR (TEST) ---
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Configurar Python
+      - name: Instalar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      - name: Instalar Pytest
+        run: pip install pytest flask
+      - name: Probar Sintaxis
+        run: pytest test_app.py
 
-      - name: Instalar dependencias para prueba
-        run: |
-          pip install pytest flask psycopg2-binary
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Correr pruebas de sintaxis
-        run: |
-          # Si hello.py tiene basura, pytest fallará aquí y detendrá el proceso.
-          pytest test_app.py
-
-  # --- BLOQUE 2: EL MENSAJERO (DEPLOY) ---
   deploy:
-    needs: test # <--- ¡IMPORTANTE! Solo corre si el bloque 'test' termina en verde.
+    needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout del codigo
-        uses: actions/checkout@v3
-
-      - name: Conectar a Tailscale
+      - uses: actions/checkout@v3
+      - name: Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
-
-      - name: Ejecutar comandos en Ubuntu via SSH
+      - name: SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -48,4 +37,4 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin main
-            sudo docker compose up -d --build 
+            sudo docker compose up -d --build
