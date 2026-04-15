@@ -1,34 +1,45 @@
-name: Deploy con Verificación UPQ
+name: Deploy TalentUPQ via Tailscale
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  test: # <--- PRIMER TRABAJO: EL INSPECTOR
+  # --- BLOQUE 1: EL INSPECTOR (TEST) ---
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Instalar Pytest
-        run: pip install pytest flask
+
+      - name: Instalar dependencias para prueba
+        run: |
+          pip install pytest flask psycopg2-binary
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
       - name: Correr pruebas de sintaxis
         run: |
-          # Intentamos ejecutar el test. Si 'hello.py' tiene basura, fallará aquí.
-          pytest test_app.py 
+          # Si hello.py tiene basura, pytest fallará aquí y detendrá el proceso.
+          pytest test_app.py
 
-  deploy: # <--- SEGUNDO TRABAJO: EL MENSAJERO
-    needs: test # <--- ¡ESTO ES LO MÁS IMPORTANTE! Si el test falla, esto no corre.
+  # --- BLOQUE 2: EL MENSAJERO (DEPLOY) ---
+  deploy:
+    needs: test # <--- ¡IMPORTANTE! Solo corre si el bloque 'test' termina en verde.
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v3
+
       - name: Conectar a Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
-      - name: SSH Deploy
+
+      - name: Ejecutar comandos en Ubuntu via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -38,4 +49,3 @@ jobs:
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin main
             sudo docker compose up -d --build
-            
