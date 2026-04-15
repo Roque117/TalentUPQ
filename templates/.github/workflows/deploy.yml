@@ -1,11 +1,11 @@
-name: Deploy con Verificación
+name: Deploy con Verificación UPQ
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  test:
+  test: # <--- PRIMER TRABAJO: EL INSPECTOR
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -13,15 +13,15 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Instalar dependencias
-        run: |
-          pip install flask pytest # Agrega aquí las que necesite tu server.py
+      - name: Instalar Pytest
+        run: pip install pytest flask
       - name: Correr pruebas de sintaxis
         run: |
-          pytest test_app.py # <--- SI ESTO FALLA, EL DEPLOY NO EMPIEZA
+          # Intentamos ejecutar el test. Si 'hello.py' tiene basura, fallará aquí.
+          pytest test_app.py 
 
-  deploy:
-    needs: test # <--- ESTO ES LA CLAVE: Solo corre si 'test' sale bien
+  deploy: # <--- SEGUNDO TRABAJO: EL MENSAJERO
+    needs: test # <--- ¡ESTO ES LO MÁS IMPORTANTE! Si el test falla, esto no corre.
     runs-on: ubuntu-latest
     steps:
       - name: Conectar a Tailscale
@@ -37,5 +37,5 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin main
-            docker compose up -d --build
+            sudo docker compose up -d --build
             
