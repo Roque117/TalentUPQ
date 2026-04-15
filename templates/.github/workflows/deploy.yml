@@ -1,22 +1,34 @@
-name: Deploy TalentUPQ via Tailscale
+name: Deploy con Verificación
 
 on:
   push:
-    branches: [ main ] # Se activa al subir cambios a la rama main
+    branches: [ main ]
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout del codigo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Instalar dependencias
+        run: |
+          pip install flask pytest # Agrega aquí las que necesite tu server.py
+      - name: Correr pruebas de sintaxis
+        run: |
+          pytest test_app.py # <--- SI ESTO FALLA, EL DEPLOY NO EMPIEZA
 
+  deploy:
+    needs: test # <--- ESTO ES LA CLAVE: Solo corre si 'test' sale bien
+    runs-on: ubuntu-latest
+    steps:
       - name: Conectar a Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
-
-      - name: Ejecutar comandos en Ubuntu via SSH
+      - name: SSH Deploy
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -26,3 +38,4 @@ jobs:
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin main
             docker compose up -d --build
+            
