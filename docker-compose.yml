@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Base de Datos PostgreSQL
   db:
     image: postgres:15-alpine
     container_name: talentupq_db
@@ -22,7 +21,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # API Flask
   flask_app:
     build: .
     container_name: talentupq_flask
@@ -38,6 +36,13 @@ services:
     networks:
       - talentupq_network
     restart: unless-stopped
+    healthcheck:
+      # Verifica que el puerto 5000 responda
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     volumes:
       - uploads_data:/app/static/uploads
 

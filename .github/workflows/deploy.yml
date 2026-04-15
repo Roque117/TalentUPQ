@@ -10,37 +10,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
       - name: Instalar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          
       - name: Instalar Dependencias
         run: |
           pip install pytest flask psycopg2-binary
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          
       - name: Probar Sintaxis
-        run: |
-          # Esto fallará si hello.py tiene errores o basura
-          pytest test_app.py
+        run: pytest test_app.py
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
       - name: Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
-          
-      # Agregamos una pausa pequeña para asegurar la conexión de red
-      - name: Esperar Red
-        run: sleep 5
-          
       - name: SSH
         uses: appleboy/ssh-action@master
         with:
@@ -49,5 +38,27 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ${{ secrets.PROJECT_PATH }}
-            git pull origin main
-            sudo docker compose up -d --build
+            # Guardar el ID del commit actual por si el nuevo falla
+            OLD_COMMIT=$(git rev-parse HEAD)
+            
+            if git pull origin main; then
+                # Intentar levantar la nueva versión
+                if sudo docker compose up -d --build; then
+                    echo "Validando estabilidad del contenedor..."
+                    sleep 15
+                    # Verificar si el contenedor de Flask sigue corriendo
+                    STATUS=$(sudo docker inspect -f '{{.State.Running}}' talentupq_flask 2>/dev/null || echo "false")
+                    
+                    if [ "$STATUS" == "false" ]; then
+                        echo "⚠️ NUEVA VERSIÓN FALLÓ. Aplicando Rollback..."
+                        git checkout $OLD_COMMIT
+                        sudo docker compose up -d --build
+                        exit 1
+                    fi
+                    echo "Despliegue exitoso."
+                else
+                    echo "Error en Build. Revirtiendo..."
+                    git checkout $OLD_COMMIT
+                    exit 1
+                fi
+            fi
